@@ -1,0 +1,38 @@
+{
+    "name": "attla/pincryp",
+    "description": "A layer of encryption a little too judicious.",
+    "keywords": [
+        "attla",
+        "laravel",
+        "cipher",
+        "encrypt",
+        "encrypter",
+        "cripter"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Lucas Nicolau",
+            "email": "lucas@octha.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.5",
+        "illuminate/contracts": "^6.0|^7.0|^8.0|^9.0",
+        "illuminate/support": "^6.0|^7.0|^8.0|^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Attla\\Pincryp\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "aliases": {
+                "Pincryp": "Attla\\Pincryp\\Facade"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
