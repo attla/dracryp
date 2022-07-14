@@ -92,7 +92,7 @@ class Factory
             $value = $value->toArray();
         } elseif ($value instanceof Jsonable) {
             $value = json_decode($value->toJson(), true);
-        } elseif ($attributes instanceof \JsonSerializable) {
+        } elseif ($value instanceof \JsonSerializable) {
             $value = (array) $value->jsonSerialize();
         } elseif ($value instanceof \Traversable) {
             $value = iterator_to_array($value);
