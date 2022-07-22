@@ -2,10 +2,11 @@
 
 namespace Attla\Pincryp;
 
+use Attla\Support\{
+    Arr as AttlaArr,
+    Str as AttlaStr
+};
 use Illuminate\Support\Str;
-use Illuminate\Support\Enumerable;
-use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Contracts\Support\Arrayable;
 
 class Factory
 {
@@ -86,19 +87,7 @@ class Factory
      */
     public static function toText($value): string
     {
-        if ($value instanceof Enumerable) {
-            $value = $value->all();
-        } elseif ($value instanceof Arrayable) {
-            $value = $value->toArray();
-        } elseif ($value instanceof Jsonable) {
-            $value = json_decode($value->toJson(), true);
-        } elseif ($value instanceof \JsonSerializable) {
-            $value = (array) $value->jsonSerialize();
-        } elseif ($value instanceof \Traversable) {
-            $value = iterator_to_array($value);
-        } elseif (!is_array($value)) {
-            $value = (array) $value;
-        }
+        $value = AttlaArr::toArray($value);
 
         if (!in_array($mode = static::getToStringMode(), ['query', 'json', 'serialize'])) {
             $mode = 'query';
@@ -207,12 +196,12 @@ class Factory
         if ($result = static::cipher(static::urlsafeB64Decode($data), $secret)) {
             if (Str::isJson($result)) {
                 $result = json_decode($result, $assoc);
-            } elseif (static::isSerialized($result)) {
+            } elseif (AttlaStr::isSerialized($result)) {
                 $result = unserialize($result);
                 if (!$assoc) {
                     $result = (object) $result;
                 }
-            } elseif (static::isHttpQuery($result)) {
+            } elseif (AttlaStr::isHttpQuery($result)) {
                 parse_str($result, $array);
                 $result = !$assoc ? (object) $array : $array;
             }
@@ -260,43 +249,5 @@ class Factory
     public static function md5($str, string $secret = ''): string
     {
         return static::encode(md5((string) $str, true), $secret);
-    }
-
-    /**
-     * Check value to find if it was serialized
-     *
-     * @param string $data
-     * @return bool
-     */
-    public static function isSerialized($data)
-    {
-        if (!is_string($data) || !$data) {
-            return false;
-        }
-
-        try {
-            $unserialized = @unserialize($data);
-        } catch (\Exception) {
-            return false;
-        }
-
-        return serialize($unserialized) === $data;
-    }
-
-    /**
-     * Check if it is a valid http query
-     *
-     * @param string $data
-     * @return bool
-     */
-    public static function isHttpQuery($data)
-    {
-        if (!is_string($data) || !$data) {
-            return false;
-        }
-
-        return preg_match('/^([+\w\.\/%_-]+=([+\w\.\/%_-]*)?(&[+\w\.\/%_-]+(=[+\w\.\/%_-]*)?)*)?$/', $data)
-            ? true
-            : false;
     }
 }
