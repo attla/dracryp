@@ -117,6 +117,10 @@ class Factory
             throw new \Exception('APP_KEY is required for use attla/pincryp.');
         }
 
+        if (Str::startsWith($key, $prefix = 'base64:')) {
+            $key = Str::after($key, $prefix);
+        }
+
         return static::$key = $key;
     }
 
