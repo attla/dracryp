@@ -222,7 +222,7 @@ class Factory
      */
     public static function urlsafeB64Encode(string $data): string
     {
-        return str_replace('=', '', strtr(base64_encode($data), '+/', '-.'));
+        return str_replace('=', '', strtr(base64_encode($data), '+/', '-_'));
     }
 
     /**
@@ -230,6 +230,8 @@ class Factory
      *
      * @param string $data A Base64 encoded string
      * @return string A decoded string
+     *
+     * @throws \InvalidArgumentException invalid base64 characters
      */
     public static function urlsafeB64Decode(string $data): string
     {
@@ -240,7 +242,7 @@ class Factory
             $data .= str_repeat('=', $padlen);
         }
 
-        return base64_decode(strtr($data, '-.', '+/'));
+        return base64_decode(strtr($data, '-_', '+/'));
     }
 
     /**
