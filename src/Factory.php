@@ -162,8 +162,8 @@ class Factory
 
         $result = '';
 
-        $dataLength = strlen($str) - 1;
-        $secretLenght = strlen($secret) - 1;
+        $dataLength = strlen($str) - 1 ?: 1;
+        $secretLenght = strlen($secret) - 1 ?: 1;
 
         do {
             $result .= $str[$dataLength] ^ $secret[$dataLength % $secretLenght];
