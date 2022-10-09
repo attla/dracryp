@@ -4,7 +4,8 @@ namespace Attla\Pincryp;
 
 use Attla\Support\{
     Arr as AttlaArr,
-    Str as AttlaStr
+    Str as AttlaStr,
+    Envir
 };
 use Illuminate\Support\Str;
 
@@ -113,7 +114,7 @@ class Factory
             return static::$key;
         }
 
-        if (!$key = env('APP_KEY')) {
+        if (!$key = Envir::get('APP_KEY')) {
             throw new \Exception('APP_KEY is required for use attla/pincryp.');
         }
 
@@ -137,7 +138,7 @@ class Factory
             return static::$toString;
         }
 
-        return static::$toString = env('APP_TO_STRING', 'query');
+        return static::$toString = Envir::get('APP_TO_STRING', 'query');
     }
 
     /**
