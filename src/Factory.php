@@ -5,57 +5,101 @@ namespace Attla\Pincryp;
 use Attla\Support\{
     Arr as AttlaArr,
     Str as AttlaStr,
-    Envir
+    Envir,
+    Generic,
+    UrlSafe
 };
 use Illuminate\Support\Str;
 
 class Factory
 {
     /**
+     * List of acceptable variable types
+     *
+     * @var array<string, int>
+     */
+    public const ACCEPTED_TYPES = [
+        'NULL'      => self::NULL,
+        'boolean'   => self::BOOL,
+        'integer'   => self::INT,
+        'double'    => self::FLOAT,
+        'string'    => self::STRING,
+        'array'     => self::ARRAY,
+        'object'    => self::OBJECT,
+    ];
+
+    /**
+     * Identification of var types
+     *
+     * @var int
+     */
+    public const NULL   = 0;
+    public const BOOL   = 1;
+    public const STRING = 2;
+    public const INT    = 3;
+    public const FLOAT  = 4;
+    public const ARRAY  = 5;
+    public const OBJECT = 6;
+
+    /**
+     * Types aliases
+     *
+     * @var int
+     */
+    public const BOOLEAN    = self::BOOL;
+    public const STR        = self::STRING;
+    public const INTEGER    = self::INT;
+    public const DOUBLE     = self::FLOAT;
+    public const OBJ        = self::STRING;
+
+    /**
+     * Type indication separator
+     *
+     * @var string
+     */
+    private static string $separator = "\x1c";
+
+    /**
+     * String encoding
+     *
+     * @var string
+     */
+    private static string $encoding = '8bit';
+
+    /**
+     * Entropy length
+     *
+     * @var int
+     */
+    private static int $entropy = 4;
+
+    /**
+     * Base64 characters
+     *
+     * @var string
+     */
+    public static string $baseAlphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
+
+    /**
+     * Base64 replacement characters
+     *
+     * @var string
+     */
+    public static null|string $alphabet = null;
+
+    /**
+     * Alphabet seed
+     *
+     * @var int
+     */
+    private static null|int $seed = null;
+
+    /**
      * Encryption secret key
      *
      * @var string
      */
-    private static $key;
-
-    /**
-     * Method to convert to string
-     *
-     * @var string
-     */
-    private static $toString;
-
-    /**
-     * Encrypt a string following a salt, salt should not be passed if it is not a hash
-     *
-     * @param string $password
-     * @param string $salt
-     * @return string
-     */
-    public static function hash(string $password, string $salt = ''): string
-    {
-        if ($salt) {
-            $saltLength = strlen($salt);
-            if ($saltLength > 40) {
-                $saltLength -= 40;
-                $salt = $saltLength % 2 ? substr($salt, 0, $saltLength) : substr($salt, -$saltLength);
-            }
-        } else {
-            $length = 47 % strlen($password);
-            if ($length == 0) {
-                $length = 47 % mt_rand(2, 46);
-            }
-
-            do {
-                $salt = substr(static::generateKey(24), 0, $length);
-            } while (!$salt);
-
-            $saltLength = strlen($salt);
-        }
-
-        $restDiv = $saltLength % 2;
-        return ($restDiv ? $salt : '') . sha1($password . $salt) . ($restDiv ? '' : $salt);
-    }
+    private static string $key = '';
 
     /**
      * Create a new encryption key
@@ -65,80 +109,184 @@ class Factory
      */
     public static function generateKey(int $length = 32): string
     {
-        return bin2hex(random_bytes($length));
+        do {
+            $key = bin2hex(random_bytes($length));
+        } while (!$key);
+
+        return $key;
     }
 
     /**
-     * Compare an unencrypted password with an encrypted password
+     * Encrypt anyting
      *
-     * @param string $unencrypted
-     * @param string $encrypted
-     * @return bool
+     * @param mixed $data
+     * @param string $secret
+     * @return string
      */
-    public static function hashEquals(string $unencrypted, string $encrypted)
+    public static function encode($data, string $secret = ''): string
     {
-        return hash_equals($encrypted, static::hash($unencrypted, $encrypted));
+        return static::maybeUseAlphabet(
+            UrlSafe::base64Encode(static::cipher(
+                static::toText($data),
+                static::getKey($secret, $entropy = static::$entropy ? static::generateKey(static::$entropy) : '')
+            ) . hex2bin($entropy)),
+            static::$baseAlphabet,
+            static::$alphabet
+        );
+    }
+
+    /**
+     * Decrypt an value
+     *
+     * @param mixed $data
+     * @param string $secret
+     * @param bool $associative
+     * @return mixed
+     */
+    public static function decode($data, string $secret = '', bool $associative = false)
+    {
+        $binary = UrlSafe::base64Decode(static::maybeUseAlphabet(
+            $data,
+            static::$alphabet,
+            static::$baseAlphabet
+        ));
+        $entropy = bin2hex(mb_substr($binary, -static::$entropy, static::$entropy, static::$encoding));
+
+        return static::convert(static::cipher(
+            mb_substr($binary, 0, mb_strlen($binary, static::$encoding) - static::$entropy, static::$encoding),
+            static::getKey($secret, $entropy)
+        ), $associative);
+    }
+
+    /**
+     * Convert value to original type
+     *
+     * @param string $value
+     * @param bool $associative
+     * @return mixed
+     */
+    private static function convert(string $value, bool $associative = false)
+    {
+        if ($type = array_search(Str::before($value, static::$separator), static::ACCEPTED_TYPES)) {
+            $value = Str::after($value, static::$separator);
+            settype($value, $type);
+            return $value;
+        }
+
+        if (Str::isJson($value)) {
+            return json_decode($value, $associative);
+        } elseif (AttlaStr::isSerialized($value)) {
+            $value = unserialize($value);
+            return $associative && is_array($value) ? $value : (object) $value;
+        }
+
+        return $value;
     }
 
     /**
      * Convert a value to string
      *
-     * @param array|\stdClass $value
+     * @param mixed $value
      * @return string
      */
     public static function toText($value): string
     {
-        $value = AttlaArr::toArray($value);
-
-        if (!in_array($mode = static::getToStringMode(), ['query', 'json', 'serialize'])) {
-            $mode = 'query';
+        if (!isset(static::ACCEPTED_TYPES[$type = gettype($value)])) {
+            return '';
+        } elseif (!in_array($type, ['array', 'object'])) {
+            return static::ACCEPTED_TYPES[$type] . static::$separator . $value;
         }
 
-        return $mode == 'query' ? http_build_query($value)
-            : ($mode == 'json'
-                ? json_encode($value)
-                : serialize($value)
-            );
+        if (AttlaArr::canBeArray($value)) {
+            return json_encode(empty($array = AttlaArr::toArray($value)) ? $value : $array);
+        }
+
+        return serialize($value);
+    }
+
+    /**
+     * Set secret key
+     *
+     * @param string $secret
+     * @return void
+     *
+     * @throws \InvalidArgumentException
+     */
+    public static function setKey(string $secret)
+    {
+        static::$key = static::getValidKey($secret);
     }
 
     /**
      * Get secret key
      *
+     * @param string $secret
+     * @param string $entropy
      * @return string
      *
      * @throws \Exception
+     * @throws \InvalidArgumentException
      */
-    public static function getKey(): string
+    public static function getKey(string $secret = '', string $entropy = ''): string
     {
-        if (static::$key) {
-            return static::$key;
+        if (!empty($secret = trim($secret ?: static::$key))) {
+            return empty($entropy = trim($entropy)) ? $secret : static::getValidKey($secret . $entropy);
         }
 
-        if (!$key = Envir::get('APP_KEY')) {
-            throw new \Exception('APP_KEY is required for use attla/pincryp.');
-        }
-
-        if (Str::startsWith($key, $prefix = 'base64:')) {
+        if (is_string($key = Envir::get('APP_KEY')) && Str::startsWith($key, $prefix = 'base64:')) {
             $key = Str::after($key, $prefix);
         }
 
-        return static::$key = $key;
+        if (!is_string($key) && empty($key)) {
+            throw new \Exception('APP_KEY is required for use attla/pincryp.');
+        }
+
+        return static::getKey(static::$key = static::getValidKey($key), $entropy);
     }
 
     /**
-     * Get to string mode
+     * Get valid secret key
      *
+     * @param string $secret
      * @return string
      *
-     * @throws \Exception
+     * @throws \InvalidArgumentException
      */
-    public static function getToStringMode(): string
+    protected static function getValidKey(string $secret): string
     {
-        if (static::$toString) {
-            return static::$toString;
+        if (empty($secret = trim($secret))) {
+            throw new \InvalidArgumentException('Invalid secret key.');
         }
 
-        return static::$toString = Envir::get('APP_TO_STRING', 'query');
+        return hash('sha256', $secret, true);
+    }
+
+    /**
+     * Set seed
+     *
+     * @param int|string $seed
+     * @return void
+     */
+    public static function setSeed(int|string $seed)
+    {
+        if (is_string($seed)) {
+            $seed = Generic::toInt($seed);
+        }
+
+        if (is_null(static::$seed) || static::$seed != $seed) {
+            static::$alphabet = Generic::sortBySeed(static::$baseAlphabet, static::$seed = $seed);
+        }
+    }
+
+    /**
+     * Set entropy length
+     *
+     * @param int $length
+     * @return void
+     */
+    public static function setEntropy(int $length = 4)
+    {
+        static::$entropy = $length;
     }
 
     /**
@@ -148,22 +296,18 @@ class Factory
      * @param string $secret
      * @return string
      */
-    protected static function cipher($str, $secret)
+    public static function cipher($str, string $secret = '')
     {
-        $secret = $secret ?: static::getKey();
-
-        if (!$str || !$secret) {
+        if (!mb_strlen($str, static::$encoding) or !$secret = static::getKey($secret)) {
             return '';
-        }
-
-        if (!is_string($str)) {
+        } elseif (!is_string($str)) {
             $str = (string) $str;
         }
 
         $result = '';
 
-        $dataLength = strlen($str) - 1 ?: 1;
-        $secretLenght = strlen($secret) - 1 ?: 1;
+        $dataLength = mb_strlen($str, static::$encoding) - 1;
+        $secretLenght = mb_strlen($secret, static::$encoding) - 1;
 
         do {
             $result .= $str[$dataLength] ^ $secret[$dataLength % $secretLenght];
@@ -173,88 +317,48 @@ class Factory
     }
 
     /**
-     * Encrypt a anyting with secret key
+     * Apply alphabet if necessary
      *
      * @param mixed $data
-     * @param string $secret
-     * @return string
-     */
-    public static function encode($data, string $secret = ''): string
-    {
-        if (is_array($data) || is_object($data)) {
-            $data = static::toText($data);
-        }
-
-        return static::urlsafeB64Encode(static::cipher($data, $secret));
-    }
-
-    /**
-     * Decrypt a anyting with secret key
-     *
-     * @param mixed $data
-     * @param string $secret
-     * @param bool $assoc
+     * @param null|string $from
+     * @param null|string $to
      * @return mixed
      */
-    public static function decode($data, string $secret = '', bool $assoc = false)
+    private static function maybeUseAlphabet($data, null|string $from, null|string $to)
     {
-        if ($result = static::cipher(static::urlsafeB64Decode($data), $secret)) {
-            if (Str::isJson($result)) {
-                $result = json_decode($result, $assoc);
-            } elseif (AttlaStr::isSerialized($result)) {
-                $result = unserialize($result);
-                if (!$assoc) {
-                    $result = (object) $result;
-                }
-            } elseif (AttlaStr::isHttpQuery($result)) {
-                parse_str($result, $array);
-                $result = !$assoc ? (object) $array : $array;
-            }
+        if (
+            !$data
+            || !is_string($data)
+            || is_null(static::$alphabet)
+            || static::$alphabet == static::$baseAlphabet
+        ) {
+            return $data;
         }
 
-        return $result;
+        return strtr($data, $from, $to);
     }
 
     /**
-     * Encode a string with URL-safe Base64
+     * Encrypt md5 bytes of a string
      *
-     * @param string $input The string you want encoded
-     * @return string The base64 encode of what you passed in
-     */
-    public static function urlsafeB64Encode(string $data): string
-    {
-        return str_replace('=', '', strtr(base64_encode($data), '+/', '-_'));
-    }
-
-    /**
-     * Decode a string with URL-safe Base64
-     *
-     * @param string $data A Base64 encoded string
-     * @return string A decoded string
-     *
-     * @throws \InvalidArgumentException invalid base64 characters
-     */
-    public static function urlsafeB64Decode(string $data): string
-    {
-        $remainder = strlen($data) % 4;
-
-        if ($remainder) {
-            $padlen = 4 - $remainder;
-            $data .= str_repeat('=', $padlen);
-        }
-
-        return base64_decode(strtr($data, '-_', '+/'));
-    }
-
-    /**
-     * Encrypt an md5 in bytes of a string
-     *
-     * @param mixed $str
+     * @param mixed $data
      * @param string $secret
      * @return string
      */
-    public static function md5($str, string $secret = ''): string
+    public static function md5($data, string $secret = ''): string
     {
-        return static::encode(md5((string) $str, true), $secret);
+        return static::encode(md5((string) $data, true), $secret);
+    }
+
+    /**
+     * Encrypt sha1 bytes of a string
+     *
+     * @param mixed $data
+     * @param string $secret
+     * @return string
+     */
+    public static function sha1($data, string $secret = ''): string
+    {
+        return static::encode(sha1((string) $data, true), $secret);
     }
 }
