@@ -36,7 +36,8 @@
     "prefer-stable": true,
     "require-dev": {
         "pestphp/pest": "^1.22",
-        "phpbench/phpbench": "^1.2"
+        "phpbench/phpbench": "^1.2",
+        "pestphp/pest-plugin-global-assertions": "^1.0"
     },
     "autoload-dev": {
         "psr-4": {
