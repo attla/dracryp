@@ -102,7 +102,7 @@ class Factory
      */
     public function encode($data): string
     {
-        $entropy = $this->config->entropy;
+        $entropy = $this->config->getInt('entropy');
         $entropy = $entropy ? random_bytes($entropy) : '';
 
         return static::maybeUseAlphabet(
@@ -129,7 +129,7 @@ class Factory
             $this->config->alphabet,
             $this->config->baseAlphabet
         ));
-        $eLength = $this->config->entropy;
+        $eLength = $this->config->getInt('entropy');
         $entropy = mb_substr($binary, -$eLength, $eLength, $this->encoding);
 
         return $this->convert($this->cipher(

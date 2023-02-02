@@ -10,7 +10,7 @@ return [
     'entropy' => 4,
 
     /**
-     * Alphabet seed
+     * Alphabet base seed to create a unique dictionary
      *
      * @var int|string
      */
