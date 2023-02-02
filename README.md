@@ -63,7 +63,7 @@ echo 'decoded: ' . $decoded.PHP_EOL;
 | Parameter | Type | Description |
 |--|--|--|
 | ``key`` | String | Encryption secret key |
-| ``entropy`` | Integer | Entropy length to generate unique results, set zero to every same result |
+| ``entropy`` | Integer | Entropy length to generate unique results, set zero for always the same results |
 | ``seed`` | String, Integer, Null | Alphabet base seed to create a unique dictionary |
 
 ## License
