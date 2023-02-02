@@ -2,6 +2,7 @@
     "name": "attla/pincryp",
     "description": "A layer of encryption a little too judicious.",
     "keywords": [
+        "zunq",
         "attla",
         "laravel",
         "cipher",
@@ -13,7 +14,7 @@
     "authors": [
         {
             "name": "Nicolau",
-            "email": "nicolau@octha.com"
+            "email": "nicolau@zunq.com"
         }
     ],
     "require": {
@@ -27,6 +28,9 @@
     },
     "extra": {
         "laravel": {
+            "providers": [
+                "Attla\\Pincryp\\PincrypServiceProvider"
+            ],
             "aliases": {
                 "Pincryp": "Attla\\Pincryp\\Facade"
             }
@@ -37,11 +41,13 @@
     "require-dev": {
         "pestphp/pest": "^1.22",
         "phpbench/phpbench": "^1.2",
-        "pestphp/pest-plugin-global-assertions": "^1.0"
+        "pestphp/pest-plugin-global-assertions": "^1.0",
+        "orchestra/testbench": "^7.19"
     },
     "autoload-dev": {
         "psr-4": {
-            "Attla\\Benchmark\\": "tests/benchmark/"
+            "Tests\\": "tests/",
+            "Benchmark\\": "tests/benchmark/"
         }
     },
     "scripts": {

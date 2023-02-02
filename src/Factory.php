@@ -5,8 +5,6 @@ namespace Attla\Pincryp;
 use Attla\Support\{
     Arr as AttlaArr,
     Str as AttlaStr,
-    Envir,
-    Generic,
     UrlSafe
 };
 use Illuminate\Support\Str;
@@ -57,81 +55,63 @@ class Factory
      *
      * @var string
      */
-    private static string $separator = "\x1c";
+    private string $separator = "\x1c";
 
     /**
      * String encoding
      *
      * @var string
      */
-    private static string $encoding = '8bit';
+    private string $encoding = '8bit';
 
     /**
-     * Entropy length
+     * Config instance
      *
-     * @var int
+     * @var \Attla\Pincryp\Config
      */
-    private static int $entropy = 4;
+    public Config $config;
 
     /**
-     * Base64 characters
+     * Create a new factory instance
      *
-     * @var string
+     * @param \Attla\Pincryp\Config $config
+     * @return void
      */
-    public static string $baseAlphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
-
-    /**
-     * Base64 replacement characters
-     *
-     * @var string
-     */
-    public static null|string $alphabet = null;
-
-    /**
-     * Alphabet seed
-     *
-     * @var int
-     */
-    private static null|int $seed = null;
-
-    /**
-     * Encryption secret key
-     *
-     * @var string
-     */
-    private static string $key = '';
-
-    /**
-     * Create a new encryption key
-     *
-     * @param int $length Optionally, a length of bytes to use
-     * @return string
-     */
-    public static function generateKey(int $length = 32): string
+    public function __construct(Config $config = null)
     {
-        do {
-            $key = bin2hex(random_bytes($length));
-        } while (!$key);
-
-        return $key;
+        $this->setConfig($config ?? new Config());
     }
 
     /**
-     * Encrypt anyting
+     * Set config instance
+     *
+     * @param \Attla\Pincryp\Config $config
+     * @return $this
+     */
+    public function setConfig(Config $config)
+    {
+        $this->config = clone $config;
+        return $this;
+    }
+
+    /**
+     * Encrypt anything
      *
      * @param mixed $data
-     * @param string $secret
      * @return string
      */
-    public static function encode($data, string $secret = ''): string
+    public function encode($data): string
     {
+        $entropy = $this->config->entropy;
+        $entropy = $entropy ? random_bytes($entropy) : '';
+
         return static::maybeUseAlphabet(
-            UrlSafe::base64Encode(static::cipher(
-                static::toText($data),
-                static::getKey($secret, $entropy = static::$entropy ? static::generateKey(static::$entropy) : '')
-            ) . hex2bin($entropy)),
-            static::$baseAlphabet,
-            static::$alphabet
+            UrlSafe::base64Encode($this->cipher(
+                $this->toText($data),
+                $this->forgeKey($this->config->key, $entropy)
+            ) . $entropy),
+            $this->config->baseAlphabet,
+            $this->config->alphabet
         );
     }
 
@@ -139,22 +119,22 @@ class Factory
      * Decrypt an value
      *
      * @param mixed $data
-     * @param string $secret
      * @param bool $associative
      * @return mixed
      */
-    public static function decode($data, string $secret = '', bool $associative = false)
+    public function decode($data, bool $associative = false)
     {
-        $binary = UrlSafe::base64Decode(static::maybeUseAlphabet(
+        $binary = UrlSafe::base64Decode($this->maybeUseAlphabet(
             $data,
-            static::$alphabet,
-            static::$baseAlphabet
+            $this->config->alphabet,
+            $this->config->baseAlphabet
         ));
-        $entropy = bin2hex(mb_substr($binary, -static::$entropy, static::$entropy, static::$encoding));
+        $eLength = $this->config->entropy;
+        $entropy = mb_substr($binary, -$eLength, $eLength, $this->encoding);
 
-        return static::convert(static::cipher(
-            mb_substr($binary, 0, mb_strlen($binary, static::$encoding) - static::$entropy, static::$encoding),
-            static::getKey($secret, $entropy)
+        return $this->convert($this->cipher(
+            mb_substr($binary, 0, mb_strlen($binary, $this->encoding) - $eLength, $this->encoding),
+            $this->forgeKey($this->config->key, $entropy)
         ), $associative);
     }
 
@@ -165,10 +145,10 @@ class Factory
      * @param bool $associative
      * @return mixed
      */
-    private static function convert(string $value, bool $associative = false)
+    private function convert(string $value, bool $associative = false)
     {
-        if ($type = array_search(Str::before($value, static::$separator), static::ACCEPTED_TYPES)) {
-            $value = Str::after($value, static::$separator);
+        if ($type = array_search(Str::before($value, $this->separator), static::ACCEPTED_TYPES)) {
+            $value = Str::after($value, $this->separator);
             settype($value, $type);
             return $value;
         }
@@ -189,12 +169,12 @@ class Factory
      * @param mixed $value
      * @return string
      */
-    public static function toText($value): string
+    private function toText($value): string
     {
         if (!isset(static::ACCEPTED_TYPES[$type = gettype($value)])) {
             return '';
         } elseif (!in_array($type, ['array', 'object'])) {
-            return static::ACCEPTED_TYPES[$type] . static::$separator . $value;
+            return static::ACCEPTED_TYPES[$type] . $this->separator . $value;
         }
 
         if (AttlaArr::canBeArray($value)) {
@@ -205,112 +185,25 @@ class Factory
     }
 
     /**
-     * Set secret key
-     *
-     * @param string $secret
-     * @return void
-     *
-     * @throws \InvalidArgumentException
-     */
-    public static function setKey(string $secret)
-    {
-        static::$key = static::getValidKey($secret);
-    }
-
-    /**
-     * Get secret key
-     *
-     * @param string $secret
-     * @param string $entropy
-     * @return string
-     *
-     * @throws \Exception
-     * @throws \InvalidArgumentException
-     */
-    public static function getKey(string $secret = '', string $entropy = ''): string
-    {
-        if (!empty($secret = trim($secret ?: static::$key))) {
-            return empty($entropy = trim($entropy)) ? $secret : static::getValidKey($secret . $entropy);
-        }
-
-        if (is_string($key = Envir::get('APP_KEY')) && Str::startsWith($key, $prefix = 'base64:')) {
-            $key = Str::after($key, $prefix);
-        }
-
-        if (!is_string($key) && empty($key)) {
-            throw new \Exception('APP_KEY is required for use attla/pincryp.');
-        }
-
-        return static::getKey(static::$key = static::getValidKey($key), $entropy);
-    }
-
-    /**
-     * Get valid secret key
-     *
-     * @param string $secret
-     * @return string
-     *
-     * @throws \InvalidArgumentException
-     */
-    protected static function getValidKey(string $secret): string
-    {
-        if (empty($secret = trim($secret))) {
-            throw new \InvalidArgumentException('Invalid secret key.');
-        }
-
-        return hash('sha256', $secret, true);
-    }
-
-    /**
-     * Set seed
-     *
-     * @param int|string $seed
-     * @return void
-     */
-    public static function setSeed(int|string $seed)
-    {
-        if (is_string($seed)) {
-            $seed = Generic::toInt($seed);
-        }
-
-        if (is_null(static::$seed) || static::$seed != $seed) {
-            static::$alphabet = Generic::sortBySeed(static::$baseAlphabet, static::$seed = $seed);
-        }
-    }
-
-    /**
-     * Set entropy length
-     *
-     * @param int $length
-     * @return void
-     */
-    public static function setEntropy(int $length = 4)
-    {
-        static::$entropy = $length;
-    }
-
-    /**
      * Cipher a string
      *
      * @param string $str
      * @param string $secret
      * @return string
      */
-    public static function cipher($str, string $secret = '')
+    private function cipher($str, string $key = '')
     {
-        if (!mb_strlen($str, static::$encoding) or !$secret = static::getKey($secret)) {
+        if (!$str || !$key || !mb_strlen($str = (string) $str, $this->encoding)) {
             return '';
-        } elseif (!is_string($str)) {
-            $str = (string) $str;
         }
 
         $result = '';
 
-        $dataLength = mb_strlen($str, static::$encoding) - 1;
-        $secretLenght = mb_strlen($secret, static::$encoding) - 1;
+        $dataLength = mb_strlen($str, $this->encoding) - 1;
+        $keyLenght = mb_strlen($key, $this->encoding) - 1;
 
         do {
-            $result .= $str[$dataLength] ^ $secret[$dataLength % $secretLenght];
+            $result .= $str[$dataLength] ^ $key[$dataLength % $keyLenght];
         } while ($dataLength--);
 
         return strrev($result);
@@ -324,13 +217,13 @@ class Factory
      * @param null|string $to
      * @return mixed
      */
-    private static function maybeUseAlphabet($data, null|string $from, null|string $to)
+    private function maybeUseAlphabet($data, null|string $from, null|string $to)
     {
         if (
             !$data
             || !is_string($data)
-            || is_null(static::$alphabet)
-            || static::$alphabet == static::$baseAlphabet
+            || is_null($from) || is_null($to)
+            || $from == $to
         ) {
             return $data;
         }
@@ -339,26 +232,14 @@ class Factory
     }
 
     /**
-     * Encrypt md5 bytes of a string
+     * Forge secret key with entropy
      *
-     * @param mixed $data
      * @param string $secret
+     * @param string $entropy
      * @return string
      */
-    public static function md5($data, string $secret = ''): string
+    private function forgeKey(string $secret, string $entropy = '')
     {
-        return static::encode(md5((string) $data, true), $secret);
-    }
-
-    /**
-     * Encrypt sha1 bytes of a string
-     *
-     * @param mixed $data
-     * @param string $secret
-     * @return string
-     */
-    public static function sha1($data, string $secret = ''): string
-    {
-        return static::encode(sha1((string) $data, true), $secret);
+        return empty($entropy = trim($entropy)) ? $secret : hash('sha256', $secret . $entropy, true);
     }
 }

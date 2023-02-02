@@ -1,8 +1,12 @@
 <?php
 
-namespace Attla\Benchmark;
+namespace Benchmark;
 
-use Attla\Pincryp\Factory as Pincryp;
+use Attla\{
+    Pincryp\Config,
+    Pincryp\Factory as Pincryp,
+    Support\Str
+};
 
 class PincrypBench
 {
@@ -11,10 +15,14 @@ class PincrypBench
      */
     public function benchConsume()
     {
-        Pincryp::encode([
+        $pincryp = new Pincryp(new Config([
+            'key' => Str::randHex(),
+        ]));
+
+        $pincryp->encode([
             'sub' => "1234567890",
             'name' => 'John Doe',
             'iat' => 1516239022
-        ], Pincryp::generateKey());
+        ]);
     }
 }

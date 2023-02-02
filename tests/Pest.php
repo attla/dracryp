@@ -1,11 +1,6 @@
 <?php
 
-use Attla\{
-    Pincryp\Factory as Pincryp,
-    Support\Envir
-};
-
-Envir::set('APP_KEY', Pincryp::generateKey());
+uses(Tests\TestCase::class)->in(__DIR__);
 
 dataset('var-types', $types = [
     'alfa'      => $value = 'Now I am become Death, the destroyer of worlds.',

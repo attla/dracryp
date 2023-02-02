@@ -7,7 +7,6 @@ composer.phar
 composer.lock
 
 ###### PHPUnit
-phpunit.xml
 .phpunit.result.cache
 
 ###### PHP CodeSniffer
