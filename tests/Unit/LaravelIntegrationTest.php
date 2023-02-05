@@ -6,6 +6,14 @@ use Attla\{
 };
 
 it(
+    'env key is valid [Laravel]',
+    fn() => assertSame(
+        hash('sha256', '12345', true),
+        app('pincryp')->config->key
+    )
+);
+
+it(
     'type is valid [Laravel] [unique]',
     fn ($value) => assertEquals(
         $value,
@@ -29,11 +37,16 @@ $wrongConfig = new Config([
     'key' => $key = Str::randHex(),
 ]);
 it(
-    'decode is invalid [Laravel] [unique]',
-    fn($value) => assertTrue(
-        ($encoded = Pincryp::encode($value)) && Pincryp::setConfig($wrongConfig)->decode(
-            $encoded,
-            is_array($value) ? true : false
-        ) !== $value
-    )
+    'decode with wrong key is invalid [Laravel] [unique]',
+    function ($value) use ($wrongConfig) {
+        $encoded = Pincryp::encode($value);
+
+        assertNotSame(
+            $value,
+            Pincryp::setConfig($wrongConfig)->decode(
+                $encoded,
+                is_array($value) ? true : false
+            )
+        );
+    }
 )->with('var-types');
