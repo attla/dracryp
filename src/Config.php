@@ -50,24 +50,14 @@ class Config extends \Attla\Support\AbstractData
      *
      * @param string $secret
      * @return string
-     *
-     * @throws \InvalidArgumentException
      */
-    public function setKey(string $secret)
+    public function setKey(string $key)
     {
-        if (
-            empty($key = trim($secret ?: ''))
-            && is_string($key = Envir::get('APP_KEY'))
-            && Str::startsWith($key, $prefix = 'base64:')
-        ) {
-            $key = Str::after($key, $prefix);
+        if (Str::startsWith($key, $prefix = 'base64:')) {
+            $key = base64_decode(Str::after($key, $prefix));
         }
 
-        if (!is_string($key) || empty($key = trim($key))) {
-            throw new \InvalidArgumentException('Secret key is required for use attla/pincryp.');
-        }
-
-        return hash('sha256', $secret, true);
+        return hash('sha256', $key, true);
     }
 
     /**
