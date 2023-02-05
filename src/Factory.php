@@ -72,6 +72,13 @@ class Factory
     public Config $config;
 
     /**
+     * Last config instance
+     *
+     * @var \Attla\Pincryp\Config
+     */
+    public null|Config $lastConfig = null;
+
+    /**
      * Create a new factory instance
      *
      * @param \Attla\Pincryp\Config $config
@@ -95,6 +102,48 @@ class Factory
     }
 
     /**
+     * Set config instance
+     *
+     * @param \Attla\Pincryp\Config $config
+     * @return $this
+     */
+    public function onceConfig(Config $config)
+    {
+        $this->lastConfig = $this->config;
+        $this->config = clone $config;
+        return $this;
+    }
+
+    /**
+     * Set config instance
+     *
+     * @param string $secret
+     * @return $this
+     */
+    public function onceKey(string $secret)
+    {
+        $this->lastConfig = clone $this->config;
+        $this->config->key = $secret;
+        return $this;
+    }
+
+    /**
+     * Set config instance
+     *
+     * @param string $secret
+     * @return $this
+     */
+    private function maybeRestoreConfig()
+    {
+        if (!is_null($this->lastConfig)) {
+            $this->config = clone $this->lastConfig;
+            $this->lastConfig = null;
+        }
+
+        return $this;
+    }
+
+    /**
      * Encrypt anything
      *
      * @param mixed $data
@@ -105,7 +154,7 @@ class Factory
         $entropy = $this->config->getInt('entropy');
         $entropy = $entropy ? random_bytes($entropy) : '';
 
-        return static::maybeUseAlphabet(
+        $encoded = static::maybeUseAlphabet(
             UrlSafe::base64Encode($this->cipher(
                 $this->toText($data),
                 $this->forgeKey($this->config->key, $entropy)
@@ -113,6 +162,9 @@ class Factory
             $this->config->baseAlphabet,
             $this->config->alphabet
         );
+
+        $this->maybeRestoreConfig();
+        return $encoded;
     }
 
     /**
@@ -132,10 +184,13 @@ class Factory
         $eLength = $this->config->getInt('entropy');
         $entropy = mb_substr($binary, -$eLength, $eLength, $this->encoding);
 
-        return $this->convert($this->cipher(
+        $decoded = $this->convert($this->cipher(
             mb_substr($binary, 0, mb_strlen($binary, $this->encoding) - $eLength, $this->encoding),
             $this->forgeKey($this->config->key, $entropy)
         ), $associative);
+
+        $this->maybeRestoreConfig();
+        return $decoded;
     }
 
     /**
