@@ -2,10 +2,7 @@
 
 namespace Attla\Pincryp;
 
-use Attla\Support\{
-    Envir,
-    Generic
-};
+use Attla\Support\Generic;
 use Illuminate\Support\Str;
 
 class Config extends \Attla\Support\AbstractData
