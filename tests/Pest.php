@@ -1,9 +1,15 @@
 <?php
 
+use Attla\{
+    Pincryp\Config,
+    Pincryp\Factory as Pincryp
+};
+use Illuminate\Support\Arr;
+
 uses(Tests\TestCase::class)->in(__DIR__);
 
 dataset('var-types', $types = [
-    'alfa'      => $value = 'Now I am become Death, the destroyer of worlds.',
+    'alfa'      => $string = 'Now I am become Death, the destroyer of worlds.',
     'alfanum'   => '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
     'special'   => '`~!@#$%^&*()\\][+={}/|:;"\'<>,.?-_',
     'acents'    => 'àáâãäÀÁÂÃÄ çÇ èéêëÈÉÊË ìíîïÌÍÎÏ ñÑ òóôõöÒÓÔÕÖ ùúûüÙÚÛÜ ýÿÝ',
@@ -32,3 +38,38 @@ dataset('var-types', $types = [
     'byte' => 0x2A,
     'others' => " \t\n\r\0\x0B\x0c\xc2\xa0",
 ]);
+
+dataset('value', [Arr::random($types)]);
+dataset('string', [$string]);
+
+function pincryp(Config $config)
+{
+    static $instances = [];
+
+    $hash = spl_object_hash($config);
+    if (!is_null($instance = $instances[$hash] ?? null)) {
+        return $instance;
+    }
+
+    return $instances[$hash] = new Pincryp($config);
+}
+
+function encode(Config $config, $value): string
+{
+    return pincryp($config)->encode($value);
+}
+
+function decode(Config $config, $value)
+{
+    return pincryp($config)->decode($value);
+}
+
+function encodeAndDecode(Config $config, $value, bool $associative = false)
+{
+    $pincryp = pincryp($config);
+
+    return $pincryp->decode(
+        $pincryp->encode($value),
+        $associative
+    );
+}
