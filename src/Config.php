@@ -60,24 +60,37 @@ class Config extends \Attla\Support\AbstractData
     /**
      * Set seed
      *
-     * @param int|string $seed
+     * @param mixed $value
      * @param mixed $old
-     * @return void
+     * @return null|int
      */
-    public function setSeed($value, $old)
+    public function setSeed($value, $old): null|int
     {
-        if (!is_int($value) && !is_string($value)) {
+        if (is_null($value)) {
             return null;
         }
 
-        if (is_string($value)) {
-            $value = Generic::toInt($value);
-        }
+        $value = is_int($value) ? abs($value) : Generic::toInt($value);
 
-        if (is_null($value) || $old != $value) {
+        if (is_null($old) || $old != $value) {
             $this->alphabet = Generic::sortBySeed($this->baseAlphabet, $value);
         }
 
         return $value;
+    }
+
+    /**
+     * Set entropy
+     *
+     * @param mixed $entropy
+     * @return int
+     */
+    public function setEntropy($value): int
+    {
+        if (is_null($value)) {
+            return 0;
+        }
+
+        return is_int($value) ? abs($value) : Generic::toInt($value);
     }
 }
