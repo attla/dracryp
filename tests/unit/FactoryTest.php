@@ -28,6 +28,12 @@ $configSeededWrong->seed = 42;
 
 // setConfig
 it(
+    'has invalid config',
+    fn($value) => encode(new Config(), $value)
+)->with('string')
+->throws(\InvalidArgumentException::class);
+
+it(
     'setConfig() valid',
     function ($value) use ($config, $configWrong) {
         $pincryp = clone pincryp($config);

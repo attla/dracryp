@@ -144,6 +144,20 @@ class Factory
     }
 
     /**
+     * Validate config instance
+     *
+     * @return void
+     *
+     * @throws \InvalidArgumentException
+     */
+    private function validateConfig()
+    {
+        if (!is_string($key = $this->config->key) || empty($key = trim($key))) {
+            throw new \InvalidArgumentException('Secret key is required for use attla/pincryp.');
+        }
+    }
+
+    /**
      * Encrypt anything
      *
      * @param mixed $data
@@ -151,6 +165,8 @@ class Factory
      */
     public function encode($data): string
     {
+        $this->validateConfig();
+
         $entropy = $this->config->getInt('entropy');
         $entropy = $entropy ? random_bytes($entropy) : '';
 
@@ -176,6 +192,8 @@ class Factory
      */
     public function decode($data, bool $associative = false)
     {
+        $this->validateConfig();
+
         $binary = UrlSafe::base64Decode($this->maybeUseAlphabet(
             $data,
             $this->config->alphabet,

@@ -40,7 +40,7 @@ class Config extends \Attla\Support\AbstractData
      *
      * @var string
      */
-    public string $key = '';
+    public null|string $key = null;
 
     /**
      * Set secret key
@@ -48,8 +48,12 @@ class Config extends \Attla\Support\AbstractData
      * @param string $secret
      * @return string
      */
-    public function setKey(string $key)
+    public function setKey($secret)
     {
+        if (empty($key = trim($secret ?: ''))) {
+            return null;
+        }
+
         if (Str::startsWith($key, $prefix = 'base64:')) {
             $key = base64_decode(Str::after($key, $prefix));
         }
