@@ -6,8 +6,6 @@
 <a href="https://packagist.org/packages/attla/pincryp"><img src="https://img.shields.io/packagist/dt/attla/pincryp" alt="Total Downloads"></a>
 </p>
 
-🧛 A layer of encryption a little too judicious.
-
 ## Installation
 
 ```bash
@@ -39,7 +37,7 @@ echo 'decoded: ' . $decoded.PHP_EOL;
 
 ```
 
-The Pincryp can encrypt all primitive types: `array`, `stdClass`, `bool`, `string`, `integer`, `float` and `null`.
+The Pincryp can encrypt all primitive types: `array`, `stdClass`, `object`, `string`, `integer`, `float`, `bool`, and `null`.
 
 See an example of array encryption:
 
