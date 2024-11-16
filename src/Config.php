@@ -4,6 +4,7 @@ namespace Attla\Pincryp;
 
 use Attla\Support\Generic;
 use Illuminate\Support\Str;
+use Tuupola\Base58;
 
 class Config extends \Attla\Support\AbstractData
 {
@@ -19,7 +20,7 @@ class Config extends \Attla\Support\AbstractData
      *
      * @var string
      */
-    public string $baseAlphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_';
+    public string $baseAlphabet = Base58::BITCOIN;
 
     /**
      * Base64 replacement characters

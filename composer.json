@@ -19,7 +19,8 @@
     ],
     "require": {
         "php": ">=7.2.5",
-        "attla/support": "dev-main"
+        "attla/support": "dev-main",
+        "tuupola/base58": "^2.1"
     },
     "autoload": {
         "psr-4": {

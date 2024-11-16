@@ -10,7 +10,7 @@ use Attla\{
 
 class PincrypBench
 {
-    /** @Revs(10000) */
+    /** @Revs(2000) */
     public function benchConsume()
     {
         $pincryp = new Pincryp(new Config([

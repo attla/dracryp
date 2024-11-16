@@ -8,6 +8,7 @@ use Attla\Support\{
     UrlSafe
 };
 use Illuminate\Support\Str;
+use Tuupola\Base58;
 
 class Factory
 {
@@ -79,6 +80,13 @@ class Factory
     public null|Config $lastConfig = null;
 
     /**
+     * Base58 instance
+     *
+     * @var \Tuupola\Base58
+     */
+    public Base58 $Base58;
+
+    /**
      * Create a new factory instance
      *
      * @param \Attla\Pincryp\Config $config
@@ -87,6 +95,7 @@ class Factory
     public function __construct(Config $config = null)
     {
         $this->setConfig($config ?? new Config());
+        $this->Base58 = new Base58(["characters" => Base58::BITCOIN]);
     }
 
     /**
@@ -171,7 +180,7 @@ class Factory
         $entropy = $entropy ? random_bytes($entropy) : '';
 
         $encoded = static::maybeUseAlphabet(
-            UrlSafe::base64Encode($this->cipher(
+            $this->Base58->encode($this->cipher(
                 $this->toText($data),
                 $this->forgeKey($this->config->key, $entropy)
             ) . $entropy),
@@ -194,7 +203,7 @@ class Factory
     {
         $this->validateConfig();
 
-        $binary = UrlSafe::base64Decode($this->maybeUseAlphabet(
+        $binary = $this->Base58->decode($this->maybeUseAlphabet(
             $data,
             $this->config->alphabet,
             $this->config->baseAlphabet
