@@ -12,6 +12,12 @@
 composer require attla/pincryp
 ```
 
+Publish resources:
+
+```bash
+php artisan vendor:publish --provider="Attla\Pincryp\PincrypServiceProvider"
+```
+
 ## Usage
 
 ```php
