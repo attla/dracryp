@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /**
      * Entropy length to generate unique results
      *
@@ -22,5 +21,4 @@ return [
      * @var string
      */
     'key' => env('APP_KEY'),
-
 ];

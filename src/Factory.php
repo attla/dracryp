@@ -4,8 +4,7 @@ namespace Attla\Pincryp;
 
 use Attla\Support\{
     Arr as AttlaArr,
-    Str as AttlaStr,
-    UrlSafe
+    Str as AttlaStr
 };
 use Illuminate\Support\Str;
 use Tuupola\Base58;
