@@ -20,5 +20,5 @@ return [
      *
      * @var string
      */
-    'key' => env('APP_KEY'),
+    'key' => config('app.key', env('APP_KEY')),
 ];
