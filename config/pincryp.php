@@ -1,5 +1,7 @@
 <?php
 
+use Attla\Support\Envir;
+
 return [
     /**
      * Entropy length to generate unique results
@@ -20,5 +22,5 @@ return [
      *
      * @var string
      */
-    'key' => config('app.key', env('APP_KEY')),
+    'key' => Envir::get('app.key', Envir::get('APP_KEY')),
 ];
