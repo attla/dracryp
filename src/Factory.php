@@ -178,13 +178,11 @@ class Factory
         $entropy = $this->config->getInt('entropy');
         $entropy = $entropy ? random_bytes($entropy) : '';
 
-        $encoded = static::maybeUseAlphabet(
-            $this->Base58->encode($this->cipher(
+        $encoded = $this->baseEncode(
+            $this->cipher(
                 $this->toText($data),
                 $this->forgeKey($this->config->key, $entropy)
-            ) . $entropy),
-            $this->config->baseAlphabet,
-            $this->config->alphabet
+            ) . $entropy
         );
 
         $this->maybeRestoreConfig();
@@ -202,11 +200,7 @@ class Factory
     {
         $this->validateConfig();
 
-        $binary = $this->Base58->decode($this->maybeUseAlphabet(
-            $data,
-            $this->config->alphabet,
-            $this->config->baseAlphabet
-        ));
+        $binary = $this->baseDecode($data);
         $eLength = $this->config->getInt('entropy');
         $entropy = mb_substr($binary, -$eLength, $eLength, $this->encoding);
 
@@ -322,5 +316,35 @@ class Factory
     private function forgeKey(string $secret, string $entropy = '')
     {
         return empty($entropy = trim($entropy)) ? $secret : hash('sha256', $secret . $entropy, true);
+    }
+
+    /**
+     * Base58 encode
+     *
+     * @param mixed $data
+     * @return string
+     */
+    public function baseEncode($data)
+    {
+        return $this->maybeUseAlphabet(
+            $this->Base58->encode($data),
+            $this->config->baseAlphabet,
+            $this->config->alphabet
+        );
+    }
+
+    /**
+     * Base58 decode
+     *
+     * @param mixed $data
+     * @return string
+     */
+    public function baseDecode($data)
+    {
+        return $this->Base58->decode($this->maybeUseAlphabet(
+            $data,
+            $this->config->alphabet,
+            $this->config->baseAlphabet
+        ));
     }
 }
