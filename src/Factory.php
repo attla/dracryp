@@ -4,10 +4,10 @@ namespace Attla\Pincryp;
 
 use Attla\Support\{
     Arr as AttlaArr,
-    Str as AttlaStr
+    Str as AttlaStr,
+    UrlSafe
 };
 use Illuminate\Support\Str;
-use Tuupola\Base58;
 
 class Factory
 {
@@ -55,7 +55,7 @@ class Factory
      *
      * @var string
      */
-    private string $separator = "\x1c";
+    private string $separator = "\x1f";
 
     /**
      * String encoding
@@ -79,32 +79,28 @@ class Factory
     public null|Config $lastConfig = null;
 
     /**
-     * Base58 instance
-     *
-     * @var \Tuupola\Base58
-     */
-    public Base58 $Base58;
-
-    /**
      * Create a new factory instance
      *
-     * @param \Attla\Pincryp\Config $config
+     * @param array|object $config
      * @return void
      */
-    public function __construct(Config $config = null)
+    public function __construct(array|object $config = null)
     {
-        $this->setConfig($config ?? new Config());
-        $this->Base58 = new Base58(["characters" => Base58::BITCOIN]);
+        $this->setConfig($config);
     }
 
     /**
      * Set config instance
      *
-     * @param \Attla\Pincryp\Config $config
+     * @param array|object $config
      * @return $this
      */
-    public function setConfig(Config $config)
+    public function setConfig(array|object $config)
     {
+        if (!$config instanceof Config) {
+            $config = new Config($config);
+        }
+
         $this->config = clone $config;
         return $this;
     }
@@ -112,11 +108,15 @@ class Factory
     /**
      * Set config instance
      *
-     * @param \Attla\Pincryp\Config $config
+     * @param array|object $config
      * @return $this
      */
-    public function onceConfig(Config $config)
+    public function onceConfig(array|object $config)
     {
+        if (!$config instanceof Config) {
+            $config = new Config($config);
+        }
+
         $this->lastConfig = $this->config;
         $this->config = clone $config;
         return $this;
@@ -319,29 +319,29 @@ class Factory
     }
 
     /**
-     * Base58 encode
+     * URL-safe Base64 encode
      *
-     * @param mixed $data
+     * @param string $data
      * @return string
      */
-    public function baseEncode($data)
+    public function baseEncode(string $data)
     {
         return $this->maybeUseAlphabet(
-            $this->Base58->encode($data),
+            UrlSafe::base64Encode($data),
             $this->config->baseAlphabet,
             $this->config->alphabet
         );
     }
 
     /**
-     * Base58 decode
+     * URL-safe Base64 decode
      *
-     * @param mixed $data
+     * @param string $data
      * @return string
      */
-    public function baseDecode($data)
+    public function baseDecode(string $data)
     {
-        return $this->Base58->decode($this->maybeUseAlphabet(
+        return UrlSafe::base64Decode($this->maybeUseAlphabet(
             $data,
             $this->config->alphabet,
             $this->config->baseAlphabet
