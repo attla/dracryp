@@ -86,7 +86,7 @@ class Factory
      */
     public function __construct(array|object $config = null)
     {
-        $this->setConfig($config);
+        $this->setConfig($config ?: new Config());
     }
 
     /**
