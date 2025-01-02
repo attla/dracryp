@@ -90,6 +90,32 @@ class Factory
     }
 
     /**
+     * Get same instance
+     *
+     * @return $this
+     */
+    public function same()
+    {
+        $this->config->entropy = 0;
+        $this->config->seed = hexdec(md5($this->config->key ?? ''));
+
+        return $this->setConfig($this->config);
+    }
+
+    /**
+     * Get unique instance
+     *
+     * @return $this
+     */
+    public function unique()
+    {
+        $this->config->entropy = 4;
+        $this->config->seed = hexdec(md5($this->config->key ?? ''));
+
+        return $this->setConfig($this->config);
+    }
+
+    /**
      * Set config instance
      *
      * @param array|object $config
